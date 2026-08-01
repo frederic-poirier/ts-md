@@ -1,125 +1,124 @@
-Block
+# CommonMark block rules
+
+## General rules
+
+- Parsing model
+  - Each line is processed in two phases: match and strip the open container prefixes, then parse the remainder as a leaf block.
+  - Existing open blocks get the first chance to continue before any new block is opened.
+  - Any open block is closed when its container closes (end of document, block quote, or list item).
+  - A container holds blocks; a leaf holds inlines or literal text.
+- Indentation
+  - All indentation is counted on the remainder, after container prefixes are stripped, not on absolute columns.
+  - Tabs expand to the next multiple of 4 before indentation is measured, and can be partially consumed.
+  - 4 or more spaces of indentation is claimed by indented code blocks.
+  - Every other block therefore allows up to 3 spaces of indentation, which never changes its meaning.
+- Blank lines
+  - Always end an open paragraph. That is their primary job.
+  - Are never required before or after a block.
+  - Multiple consecutive blank lines have no additional effect.
+  - Inside a code block they are content: interior blank lines are preserved, trailing ones are not.
+  - Between two block quotes, they separate rather than merge.
+  - Inside a list they decide tight vs loose, the only case where a blank line changes output structure instead of just ending something.
+- Interrupting a paragraph
+  - A construct may not interrupt a paragraph when it could plausibly occur as ordinary wrapped prose.
+  - Can interrupt: thematic breaks, ATX headings, fenced code blocks, block quotes, HTML blocks 1-6.
+  - Cannot interrupt: indented code blocks, HTML blocks of type 7, link reference definitions.
+  - Conditional: list items, only if the item does not start with a blank line and, when ordered, starts at `1`.
+- Precedence, when two constructs match the same line
+  - Setext heading underline beats thematic break.
+  - Thematic break beats list item.
+  - Container markers resolve before leaf markers.
+- Markers
+  - A marker that could begin a word requires a following space or tab: `#` and list markers. `>` does not.
+  - Repeated-character constructs need at least 3 characters: thematic breaks and code fences.
+
+## Block
+
 - Container Block, has other blocks as its contents
   - Block quotes
     - Syntax: `>`
     - Rules:
-      - Can have a space or not between the content and the `>`
-      - Can be preceded by up to three spaces of indentations
-      - If line is continuations of paragraphs, block quote markers are optionnal.
-      - Can interupt paragraphs
-      - Black lines are not needed before or after block quotes.
-      - Blank line is needed between a block quote and a following paragraph.
-      - Multiple marker make nested block quote.
-      - When including an indented code block in a block quote, the block quote marker include both `>` and a following space.
+      - The space between `>` and the content is optional and, if present, is part of the marker.
+      - If a line is a paragraph continuation, the `>` marker is optional (lazy continuation).
+      - A blank line separates two block quotes instead of merging them.
+      - Multiple markers make nested block quotes.
+      - When including an indented code block, the marker consumes both `>` and one following space before the 4 spaces are counted.
+  - Lists
+    - Rules:
+      - A list is a sequence of list items of the same type.
+      - Changing the bullet character or the ordered delimiter starts a new list.
+      - The start number of an ordered list comes from its first item, later numbers are ignored.
+      - A list is loose if any two items are separated by a blank line, or if any item contains two block-level children with a blank line between them.
+      - Loose list items wrap their paragraph contents in `<p>`, tight ones do not.
   - List items
     - Syntax
       - Bullet list: `-`, `+`, `*`
       - Ordered list: sequence of 1-9 digits followed by `.` or `)`.
     - Rules:
-      - Content column = marker width + spaces after the marker; subsequent blocks must be indented that much to stay in the item.
-      - At least one space or tab is required between the marker and the content, otherwise it is a paragraph.
-      - 1 to 4 spaces of separation, 5 or more means the content starts with an indented code block.
+      - Content column = marker width + spaces after the marker; subsequent blocks must reach that indentation to stay in the item.
+      - 1 to 4 spaces of separation. 5 or more means the content starts with an indented code block.
       - If the content starts with an indented code block, only one space counts as separation and the rest belongs to the code.
       - If the item starts with a blank line, the required indentation is marker width + 1, whatever spaces follow the marker.
       - At most one blank line at the start of an item, a second one ends it.
-      - Empty list items are allowed, a list can start or end with one.
-      - Can be preceded by up to three spaces of indentation, four makes an indented code block.
-      - Indentation is relative to the containing block, not to absolute columns.
-      - Lazy continuation: paragraph continuation lines can drop some or all of their indentation.
-      - Can interrupt paragraphs, but then the item cannot start with a blank line and an ordered marker must start at `1`.
-      - An empty list item cannot interrupt a paragraph.
-      - A line that is a thematic break is never a list item.
-      - Ordered start numbers are nine digits or less, may begin with `0`, and cannot be negative.
+      - Empty items are allowed, a list can start or end with one, but an empty item cannot interrupt a paragraph.
+      - Ordered start numbers are 9 digits or less, may begin with `0`, and cannot be negative.
       - Can contain any kind of block, including several separated by more than one blank line.
-      - Blank lines inside an indented code block in an item are preserved verbatim.
-      - Sublists must be indented to the parent content column, so a wider marker requires more indentation.
+      - Sublists must reach the parent content column, so a wider marker requires more indentation.
       - A list may be the first block in a list item (`- - foo`).
+
 - Leaf Block, can only contain inline
   - Thematic breaks
-    - Rules: 
-      - max 3 spaces at the start allowed
-      - more then 3 character is allowed
-      - space character inside is allowed
-      - no character other then `*`, `-`, `_` and space are allowed
-      - lines before and after that are not blank are allowed
-      - `---` under a Paragraphs makes a `setext heading`
-      - can interupt paragraphs
-    - Syntax: `***`, `---` , `___`
+    - Syntax: `***`, `---`, `___`
+    - Rules:
+      - 3 or more of the same character, all three variants are equivalent.
+      - Spaces and tabs are allowed between and after the characters, nothing else is.
+      - `---` under a paragraph is a setext heading instead.
   - ATX headings
-    - Syntax: `# [content]`, `##`, `###`, `####`, `#####`, `######`
+    - Syntax: `# [content]` through `###### [content]`
     - Rules:
-      - at least one space or tab is required between the # characters and headings contents, unless its empty.
-      - empty ATX headings are allowed
-      - up to 3 spaces of indentations are allowed.
-      - closing sequence is allowed (any length and with anything but spaces or tabs following and preceded with space or tab)
-      - can interupt paragraphs 
-      - lines before and after that are not blank are allowed
+      - 1 to 6 `#` characters, 7 or more is a paragraph.
+      - At least one space or tab between the `#` characters and the content, unless the heading is empty.
+      - Empty ATX headings are allowed.
+      - Leading and trailing spaces in the content are stripped.
+      - Optional closing sequence of any number of `#`, preceded by a space or tab and followed only by spaces or tabs.
   - Setext headings
-    - Syntax: `===`, `---`
+    - Syntax: `===` for `h1`, `---` for `h2`
     - Rules:
-      - Setext cannot be empty
-      - Does not need a blank line before or after the setext headings.
-      - any length
-      - cannot contain internal spaces or tabs.
-      - can contain external spaces (up to three at start, same for content)
+      - The content is a paragraph, so it can span multiple lines, and cannot be empty.
+      - The underline can be any length but cannot contain internal spaces or tabs.
+      - The underline cannot be a lazy continuation line.
   - Indented code blocks
-    - Syntax: `     [content]`
+    - Syntax: `    [content]`
     - Rules:
-      - Non blank line preceded by 4 or more spaces of indentations.
-      - Content of code block are literal text, not get parsed as Markdown.
-      - Can have blank line after
-      - cannot interrupt a paragaph.
-      - any fewer then 4 spaces of indentations ends the code block immediately.
-      - Indented code can occur immediately before and after other kinds of block.
+      - Non-blank line preceded by 4 or more spaces of indentation.
+      - Contents are literal text, not parsed as Markdown.
+      - Fewer than 4 spaces on a non-blank line ends the block; blank lines do not.
+      - Interior blank lines are part of the block, trailing ones are not.
+      - Can occur immediately before and after other kinds of block.
   - Fenced code blocks
-    - Syntax: `~~~`, or backticks
-    - Rules: 
-      - Fewer than three backticks is not enoughs.
-      - Closing code fence must use the same character as the opening fence.
-      - Closing code fence must be as long as the opening fence.
-      - Unclosed code blocks are closed by the end of the document or block quote / list item.
-      - Can have empty lines as its content and be empty.
-      - Can be indented (less then 4), indenting space is remove from the content. 
-      - Opening and closing indentations does not need to match. 
-      - Code fence cannot contain internal spaces or tabs.
-      - Can interupt paragraphs
-      - Content after opening fences (same line) are info string. -> `class="language-[content]"`
-      - Closing code fences cannot have info strings and any other non spaces character
+    - Syntax: 3 or more backticks, or 3 or more `~`
+    - Rules:
+      - The closing fence must use the same character and be at least as long as the opening fence.
+      - The closing fence takes no info string and no other non-space character.
+      - Contents are literal text and may be empty or contain blank lines.
+      - The opening fence indentation is stripped from each content line, up to that amount.
+      - Opening and closing indentation do not need to match.
+      - Content after the opening fence is the info string, its first word becomes `class="language-[content]"`.
+      - A backtick fence cannot contain backticks in its info string; a tilde fence can.
   - HTML blocks [TODO]
     - Syntax: [Match start and end condition](https://spec.commonmark.org/0.31.2/#html-block)
     - Rules:
-      - HTML blocks continue until they are closed by their appropriate end conditions, or the last line of the document or other container block.
-      - HTML blocks of type 1-6 can interrupt a paragraph
-      - HTML blocks of type 7 Cannot interrupt a paragraph 
-      - Opening tag can be preceded by up to three spaces of indentations but not four.
+      - Continue until closed by their end condition, or by the end of the document or containing block.
+      - Contents are literal text.
+  - Link reference definitions
+    - Syntax: `[label]: destination "title"`
+    - Rules:
+      - Produces no output of its own, it only defines a label for later reference links.
+      - The label is case-insensitive and normalized on whitespace.
+      - The optional title may be on the following line.
+      - The definition is scoped to the whole document, wherever it appears.
   - Paragraphs
-    - Rule: 
-      - A sequence of non-blank lines that cannot be interpreted as other kinds of blocks forms a paragraph.
-      - Paragraphs can contain multiple lines but no blank lines.
-      - multiple blank lines between paragraphs have no effects.
-      - leading spaces or tabs are skipped.
-      - Lines after the first may be indented any amount
-      - First line may be preceded by up to three spaces of indentation.
-  - Blank lines
-    - Rule: between block-level are ignored
-
-other
-- Backslash character
-- tabs
-- spaces
-
-
-Principe recurrant.
-- trim les espaces.
-- any length
-- blank line
-- 3 espaces en debut max
-- interupt
-
-idea 
-- Faire des validations, faire la structure (tree) selon ce qui est possible.
-- Genre dans le tree children, blockquote peut contenir des children de type paragraph.. mais paragaph ne peut pas avoir un children blockquote.
-
-Precedences
-`setext heading > thematic breaks` 
-`list item > Indented code blocks`
+    - Rules:
+      - A sequence of non-blank lines that cannot be interpreted as another kind of block.
+      - Can contain multiple lines but no blank lines.
+      - Leading spaces or tabs are skipped, and lines after the first may be indented any amount.
